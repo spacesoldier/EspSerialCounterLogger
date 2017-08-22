@@ -2,6 +2,8 @@
 #include <ESP8266WiFi.h>
 #include <WiFiManager.h>
 #include "EspSoftwareSerial.h"
+#include "FS.h"
+
 const char* host = "192.168.88.245";
 WiFiClient client;
 
@@ -14,14 +16,14 @@ String dataWh = "";
 bool dataAwaitsTransmission = false;
 bool dataAwaitsBackup = false;
 
-
-
 void setup()
 {
 	Serial.begin(115200);
 	Serial.println("hello");
 
 	receiver.begin(38400);
+
+	SPIFFS.begin();
 }
 
 int dataReadPeriodMs = 50;
@@ -29,7 +31,7 @@ unsigned long old_time_dataRead = 0;
 
 void receiveData(){
 	if (receiver.available() > 0){
-		//TODO: read buffer, choose the last message, clean the buffer
+		// read buffer, choose the last message, clean the buffer
 		String incomingData = receiver.readString();
 		int posR = incomingData.lastIndexOf('\n');
 		int posL = 0;
@@ -52,12 +54,24 @@ int saveDataPeriodMs = 50;
 unsigned long old_time_saveData = 0;
 void saveData(){
 	if (dataAwaitsBackup){
-		//TODO: save data to SPIFFS
+		//save data to SPIFFS
+		File log = SPIFFS.open("/log.txt", "w");
+		if (!log) {
+			Serial.println("file open failed");
+		} else {
+			log.print("Ch=");
+			log.print(dataCh);
+			log.print(',');
+			log.print("Wh=");
+			log.println(dataWh);
+		}
 
 		dataAwaitsBackup = false;
 	}
 }
 
+int transmitDataPeriodMs = 500;
+unsigned long old_time_transmitData = 0;
 void transmitData(){
 	if (dataAwaitsTransmission){
 		//TODO: transmit data over the web
@@ -78,4 +92,5 @@ void loop()
 {
 	checkTime(dataReadPeriodMs, old_time_dataRead, receiveData, NULL);
 	checkTime(saveDataPeriodMs, old_time_saveData, saveData, NULL);
+	checkTime(transmitDataPeriodMs, old_time_transmitData, saveData, NULL);
 }
