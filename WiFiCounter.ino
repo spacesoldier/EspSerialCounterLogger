@@ -27,7 +27,7 @@ void setup()
 	Serial.begin(115200);
 	Serial.println("hello");
 
-	receiver.begin(38400);
+	//receiver.begin(38400);
 
 	SPIFFS.begin();
 
@@ -38,10 +38,10 @@ void setup()
 	    Serial.print(".");
 	}
 
-	Serial.println("");
-	Serial.println("WiFi connected");
-	Serial.println("IP address: ");
-	Serial.println(WiFi.localIP());
+	//Serial.println("");
+	//Serial.println("WiFi connected");
+	//Serial.println("IP address: ");
+	//Serial.println(WiFi.localIP());
 
 	fullUrl = String("http://");
 	fullUrl.concat(host);
@@ -55,7 +55,7 @@ int dataReadPeriodMs = 50;
 unsigned long old_time_dataRead = 0;
 
 void receiveData(){
-	if (receiver.available() > 0){
+	if (Serial.available() > 0){
 		// read buffer, choose the last message, clean the buffer
 		String incomingData = receiver.readString();
 		int posR = incomingData.lastIndexOf('\n');
@@ -82,7 +82,7 @@ void saveData(){
 		//save data to SPIFFS
 		File log = SPIFFS.open("/log.txt", "w");
 		if (!log) {
-			Serial.println("file open failed");
+			//Serial.println("file open failed");
 		} else {
 			log.print("Ch=");
 			log.print(dataCh);
@@ -100,7 +100,7 @@ int transmitDataPeriodMs = 500;
 unsigned long old_time_transmitData = 0;
 void transmitData(){
 	if (dataAwaitsTransmission){
-		//TODO: transmit data over the web
+		//transmit data over the web
 		HTTPClient http;    //Declare object of class HTTPClient
 
 		http.begin(fullUrl);      //Specify request destination
@@ -109,8 +109,8 @@ void transmitData(){
 		int httpCode = http.POST("{Ch:"+dataCh+",Wh:"+dataWh+"}");   //Send the request
 		String payload = http.getString();                  //Get the response payload
 
-		Serial.println(httpCode);   //Print HTTP return code
-		Serial.println(payload);    //Print request response payload
+		//Serial.println(httpCode);   //Print HTTP return code
+		//Serial.println(payload);    //Print request response payload
 
 		http.end();  //Close connection
 
