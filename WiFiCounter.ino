@@ -1,10 +1,16 @@
 #include "Arduino.h"
 #include <ESP8266WiFi.h>
-#include <WiFiManager.h>
 #include "EspSoftwareSerial.h"
+#include <ESP8266HTTPClient.h>
 #include "FS.h"
 
+const char* ssid     = "net-xxx";
+const char* password = "xxxxxxx";
+
 const char* host = "192.168.88.245";
+const char* httpPort = "80";
+const char* url = "/logdata";
+String fullUrl = "";
 WiFiClient client;
 
 //software serial: GPIO5 as RX, GPIO2 as TX
@@ -24,6 +30,25 @@ void setup()
 	receiver.begin(38400);
 
 	SPIFFS.begin();
+
+	WiFi.begin(ssid, password);
+
+	while (WiFi.status() != WL_CONNECTED) {
+	    delay(50);
+	    Serial.print(".");
+	}
+
+	Serial.println("");
+	Serial.println("WiFi connected");
+	Serial.println("IP address: ");
+	Serial.println(WiFi.localIP());
+
+	fullUrl = String("http://");
+	fullUrl.concat(host);
+	fullUrl.concat(':');
+	fullUrl.concat(httpPort);
+	fullUrl.concat('/');
+	fullUrl.concat(url);
 }
 
 int dataReadPeriodMs = 50;
@@ -65,6 +90,7 @@ void saveData(){
 			log.print("Wh=");
 			log.println(dataWh);
 		}
+		log.close();
 
 		dataAwaitsBackup = false;
 	}
@@ -75,12 +101,25 @@ unsigned long old_time_transmitData = 0;
 void transmitData(){
 	if (dataAwaitsTransmission){
 		//TODO: transmit data over the web
+		HTTPClient http;    //Declare object of class HTTPClient
+
+		http.begin(fullUrl);      //Specify request destination
+		http.addHeader("Content-Type", "application/json");  //Specify content-type header
+
+		int httpCode = http.POST("{Ch:"+dataCh+",Wh:"+dataWh+"}");   //Send the request
+		String payload = http.getString();                  //Get the response payload
+
+		Serial.println(httpCode);   //Print HTTP return code
+		Serial.println(payload);    //Print request response payload
+
+		http.end();  //Close connection
 
 		dataAwaitsTransmission = false;
+
 	}
 }
 
-void checkTime(int period, unsigned long& old_time, void callback(void*), void* args){
+void checkTime(int period, unsigned long& old_time, void callback(void), void* args){
 	if (millis() - old_time > period){
 		callback();
 		old_time = millis();
